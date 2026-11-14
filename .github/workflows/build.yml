@@ -1,0 +1,42 @@
+name: Juragan Kost
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: "4.3"
+
+jobs:
+  export-android:
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Siapkan Godot dan keystore
+        run: |
+          export HOME=/root
+          mkdir -p build
+          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android \
+            -keystore /root/debug.keystore -storepass android \
+            -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+          godot --headless --import || true
+
+      - name: Export APK
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /root/debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+        run: |
+          export HOME=/root
+          godot --headless --export-debug "Android" build/juragan-kost.apk
+          ls -la build
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: juragan-kost-apk
+          path: build/juragan-kost.apk
