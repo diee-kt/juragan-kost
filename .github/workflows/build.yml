@@ -1,44 +1,40 @@
-name: Juragan Kost
-
+name: Build APK
 on:
-  push:
-    branches: [main, master]
   workflow_dispatch:
-
-env:
-  GODOT_VERSION: "4.3"
-
+  push:
+    branches: [main]
 jobs:
-  export-android:
+  export:
     runs-on: ubuntu-latest
     container:
       image: barichello/godot-ci:4.3
     steps:
       - uses: actions/checkout@v4
-
-      - name: Siapkan Godot dan keystore
+      - name: Setup
         run: |
-          export HOME=/root
-          mkdir -p build
-          if [ ! -f /root/debug.keystore ]; then
-            keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android \
-              -keystore /root/debug.keystore -storepass android \
-              -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
-          fi
-          godot --headless --import || true
-
+          mkdir -p ~/.local/share/godot/export_templates
+          cp -r /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/ || true
+          ls -R ~/.local/share/godot/export_templates | head -20
+          JAVA_PATH=$(dirname $(dirname $(readlink -f $(which keytool))))
+          echo "Java: $JAVA_PATH"
+          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+          mkdir -p ~/.config/godot
+          cat > ~/.config/godot/editor_settings-4.3.tres <<EOT
+          [gd_resource type="EditorSettings" format=3]
+          [resource]
+          export/android/java_sdk_path = "$JAVA_PATH"
+          export/android/android_sdk_path = "/usr/lib/android-sdk"
+          export/android/debug_keystore = "$GITHUB_WORKSPACE/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          EOT
+          cp ~/.config/godot/editor_settings-4.3.tres ~/.config/godot/editor_settings-4.tres
       - name: Export APK
-        env:
-          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /root/debug.keystore
-          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
-          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
-          export HOME=/root
-          godot --headless --export-debug "Android" build/juragan-kost.apk
-          ls -la build
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+          mkdir -p build
+          godot --headless --verbose --import || true
+          godot --headless --verbose --export-debug "Android" build/randy.apk
+      - uses: actions/upload-artifact@v4
         with:
-          name: juragan-kost-apk
-          path: build/juragan-kost.apk
+          name: randy-apk
+          path: build/randy.apk
