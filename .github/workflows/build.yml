@@ -1,4 +1,4 @@
-name: Build APK
+name: Juragan Kost
 on:
   workflow_dispatch:
   push:
@@ -33,8 +33,8 @@ jobs:
         run: |
           mkdir -p build
           godot --headless --verbose --import || true
-          godot --headless --verbose --export-debug "Android" build/randy.apk
+          godot --headless --verbose --export-debug "Android" build/juragan-kost.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: randy-apk
-          path: build/randy.apk
+          name: juragan-kost-apk
+          path: build/juragan-kost.apk
